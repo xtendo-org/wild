@@ -1,0 +1,31 @@
+name:               wild
+version:            0.1.0
+synopsis:           Release your Haskell project to GitHub
+description:
+    wild is a tool to deliver a Haskell project to GitHub's Release API.
+license:            AGPL-3
+license-file:       LICENSE
+author:             Kinoru
+maintainer:         xkinoru@gmail.com
+copyright:          Copyright (C) 2015 Kinoru
+category:           Development
+build-type:         Simple
+cabal-version:      >=1.18
+homepage:           https://github.com/kinoru/wild
+bug-reports:        https://github.com/kinoru/wild/issues
+tested-with:        GHC==7.10.2
+extra-source-files: README.md CHANGELOG.md
+
+executable wild
+    default-extensions: OverloadedStrings, RecordWildCards
+    main-is:            Main.hs
+    hs-source-dirs:     src
+    build-depends:
+        bytestring == 0.10.*,
+        lens == 4.*,
+        process == 1.*,
+        unix == 2.*,
+        wreq == 0.4.*,
+        base >=4.8 && <4.9
+    ghc-options: -Wall -fwarn-incomplete-uni-patterns -O2 -threaded
+    default-language: Haskell2010
