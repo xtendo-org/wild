@@ -9,24 +9,39 @@ data L1Expr
     | ExprAny
     | ExprChain L1Expr L1Expr
 
-data L1Match = L1Match Int Int
-    deriving (Show)
+data Match = Match Int Int Int deriving (Show)
 
-matchOffset :: L1Match -> Int -> L1Match
-matchOffset (L1Match start end) offset =
-    L1Match (start + offset) (end + offset)
+data L2Expr
+    = L2Expr L1Expr
+    | ExprFormer L2Expr L2Expr
+    | ExprLatter L2Expr L2Expr
 
-match :: L1Expr -> ByteString -> Maybe L1Match
-match e b = case e of
+matchOffset :: Match -> Int -> Match
+matchOffset (Match start end consumed) offset =
+    Match (start + offset) (end + offset) (consumed + offset)
+
+matchL1 :: L1Expr -> ByteString -> Maybe Match
+matchL1 expr b = case expr of
     ExprExact eb -> if eb `B.isPrefixOf` b
-        then Just (L1Match 0 $ B.length eb) else Nothing
-    ExprAny -> Just (L1Match 0 $ B.length b)
-    ExprChain exp1 exp2 -> case match exp1 b of
-        Just (L1Match start1 end1) -> case match exp2 (B.drop end1 b) of
-            Just (L1Match _ end2) -> Just (L1Match start1 (end1 + end2))
-            Nothing -> Nothing
-        Nothing -> Nothing
-    ExprWhile f -> Just (L1Match 0 (B.length $ B.takeWhile f b))
+        then Just (let l = B.length eb in Match 0 l l) else Nothing
+    ExprAny -> Just (let l = B.length b in Match 0 l l)
+    ExprChain expr1 expr2 -> do
+        Match st1 _ c1 <- matchL1 expr1 b
+        Match _ _ c2 <- matchL1 expr2 (B.drop c1 b)
+        return $ let l = c1 + c2 in Match st1 l l
+    ExprWhile f -> Just (let l = B.length $ B.takeWhile f b in Match 0 l l)
+
+-- matchL2 :: L2Expr -> ByteString -> Maybe L2Match
+-- matchL2 expr b = case expr of
+--     L2Expr expL1 -> (\ (L1Match st ed) -> L2Match (L1Match st ed) ed) <$> matchL1 expL1 b
+--     ExprFormer expr1 expr2 -> do
+--         L2Match m1 c1 <- matchL2 expr1 b
+--         L2Match _ c2 <- matchL2 expr2 (B.drop c1 b)
+--         return $ L2Match m1 c2
+--     ExprLatter expr1 expr2 -> do
+--         L2Match _ c1 <- matchL2 expr1 b
+--         m2 <- matchL2 expr2 (B.drop c1 b)
+--         return m2
 
 data Cabal = Cabal
     { cabalPrefix :: ByteString
@@ -45,19 +60,19 @@ parseLines f b = this rest
         Just x -> (x :)
         _ -> id
 
-linesTill :: L1Expr -> ByteString -> Maybe L1Match
-linesTill e b = linesTill' 0
-  where
-    linesTill' :: Int -> Maybe L1Match
-    linesTill' n = case match e current of
-        Just m -> Just $ m `matchOffset` n
-        Nothing -> if isEnd
-            then Nothing
-            else linesTill' nextIndex
-      where
-        (current, next) = B.break (== '\n') $ B.drop n b
-        isEnd = B.length next <= 1
-        nextIndex = n + B.length current + 1 -- newline character
+-- linesTill :: L1Expr -> ByteString -> Maybe L1Match
+-- linesTill e b = linesTill' 0
+--   where
+--     linesTill' :: Int -> Maybe L1Match
+--     linesTill' n = case match e current of
+--         Just m -> Just $ m `matchOffset` n
+--         Nothing -> if isEnd
+--             then Nothing
+--             else linesTill' nextIndex
+--       where
+--         (current, next) = B.break (== '\n') $ B.drop n b
+--         isEnd = B.length next <= 1
+--         nextIndex = n + B.length current + 1 -- newline character
 
 -- parseCabal :: ByteString -> [ByteString]
 -- parseCabal = parseLines $ \ b -> if "executable " `B.isPrefixOf` b
