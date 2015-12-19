@@ -1,7 +1,7 @@
 module Parser where
 
-import Data.ByteString (ByteString)
-import qualified Data.ByteString.Char8 as B
+import ByteString (ByteString)
+import qualified ByteString as B
 
 data L1Expr
     = ExprExact ByteString
@@ -16,30 +16,33 @@ data L2Expr
     | ExprFormer L2Expr L2Expr
     | ExprLatter L2Expr L2Expr
 
-matchOffset :: Match -> Int -> Match
-matchOffset (Match start end consumed) offset =
-    Match (start + offset) (end + offset) (consumed + offset)
+class Expr expr where
+    match :: expr -> Int -> ByteString -> Match
 
-matchL1 :: L1Expr -> ByteString -> Maybe Match
-matchL1 expr b = case expr of
-    ExprExact eb -> if eb `B.isPrefixOf` b
-        then Just (let l = B.length eb in Match 0 l l) else Nothing
-    ExprAny -> Just (let l = B.length b in Match 0 l l)
+matchL1 :: L1Expr -> Int -> ByteString -> Maybe Match
+matchL1 expr o b = case expr of
+    ExprExact eb -> if eb `B.isPrefixOf` current
+        then Just (let l = o + B.length eb in Match o l l) else Nothing
+    ExprAny -> Just (let l = B.length b in Match o l l)
     ExprChain expr1 expr2 -> do
-        Match st1 _ c1 <- matchL1 expr1 b
-        Match _ _ c2 <- matchL1 expr2 (B.drop c1 b)
-        return $ let l = c1 + c2 in Match st1 l l
-    ExprWhile f -> Just (let l = B.length $ B.takeWhile f b in Match 0 l l)
+        Match _ _ c1 <- matchL1 expr1 o b
+        Match _ _ c2 <- matchL1 expr2 c1 b
+        return $ Match o c2 c2
+    ExprWhile f -> Just $
+        let l = (o +) $ B.length $ B.takeWhile f current
+        in Match o l l
+  where
+    current = B.drop o b
 
--- matchL2 :: L2Expr -> ByteString -> Maybe L2Match
+-- matchL2 :: L2Expr -> ByteString -> Maybe Match
 -- matchL2 expr b = case expr of
---     L2Expr expL1 -> (\ (L1Match st ed) -> L2Match (L1Match st ed) ed) <$> matchL1 expL1 b
+--     L2Expr expL1 -> matchL1 expL1 b
 --     ExprFormer expr1 expr2 -> do
---         L2Match m1 c1 <- matchL2 expr1 b
---         L2Match _ c2 <- matchL2 expr2 (B.drop c1 b)
---         return $ L2Match m1 c2
+--         Match st1 ed1 c1 <- matchL2 expr1 b
+--         Match _ _ c2 <- matchL2 expr2 (B.drop c1 b)
+--         return $ Match st1 ed1 c2
 --     ExprLatter expr1 expr2 -> do
---         L2Match _ c1 <- matchL2 expr1 b
+--         Match _ _ c1 <- matchL2 expr1 b
 --         m2 <- matchL2 expr2 (B.drop c1 b)
 --         return m2
 

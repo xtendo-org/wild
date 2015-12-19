@@ -1,6 +1,7 @@
 module ByteString
     ( readFile
     , writeFile
+    , range
     , module Data.ByteString.Char8
     ) where
 
@@ -10,6 +11,9 @@ import System.IO (hClose)
 import Data.ByteString.Char8 hiding (readFile, writeFile)
 import qualified Data.ByteString as B
 import System.Posix.ByteString
+
+range :: Int -> Int -> ByteString -> ByteString
+range start end = B.take (end - start) . B.drop start
 
 defaultFlags :: OpenFileFlags
 defaultFlags = OpenFileFlags
