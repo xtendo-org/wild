@@ -46,3 +46,16 @@ parseChangeLog :: ByteString -> [ByteString]
 parseChangeLog = parseLines $ \ b -> if "##" `B.isPrefixOf` b
     then Just $ B.takeWhile (/= ' ') $ B.dropWhile (== ' ') $ B.drop 2 b
     else Nothing
+
+data ReadMe = ReadMe
+    { readMePrefix :: ByteString
+    , readMeSuffix :: ByteString
+    }
+
+parseReadMe :: ByteString -> ByteString -> Either ByteString ReadMe
+parseReadMe ver b = case match (ExprScan ver) 0 b of
+    Nothing -> Left $ mconcat ["version string ", ver, " not found"]
+    Just (Match st ed _) -> Right ReadMe
+        { readMePrefix = B.take st b
+        , readMeSuffix = B.drop ed b
+        }

@@ -15,6 +15,7 @@ import qualified ByteString as B
 data L1Expr
     = ExprExact ByteString
     | ExprWhile (Char -> Bool)
+    | ExprScan ByteString
     | ExprAny
     | ExprChain L1Expr L1Expr
 
@@ -32,14 +33,20 @@ instance Expr L1Expr where
     match expr o b = case expr of
         ExprExact eb -> if eb `B.isPrefixOf` current
             then Just (let l = o + B.length eb in Match o l l) else Nothing
+        ExprWhile f -> Just $
+            let l = (o +) $ B.length $ B.takeWhile f current
+            in Match o l l
+        ExprScan eb -> let
+            (before, after) = B.breakSubstring eb current
+            spotted = o + B.length before
+            consumed = spotted + B.length eb
+            in if B.length after == 0 then Nothing
+                else Just $ Match spotted consumed consumed
         ExprAny -> Just (let l = B.length b in Match o l l)
         ExprChain expr1 expr2 -> do
             Match _ _ c1 <- match expr1 o b
             Match _ _ c2 <- match expr2 c1 b
             return $ Match o c2 c2
-        ExprWhile f -> Just $
-            let l = (o +) $ B.length $ B.takeWhile f current
-            in Match o l l
       where
         current = B.drop o b
 
