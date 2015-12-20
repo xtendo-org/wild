@@ -17,7 +17,7 @@ data L1Expr
 data Match = Match Int Int Int deriving (Show)
 
 data L2Expr
-    = L2Expr L1Expr
+    = L1Expr L1Expr
     | ExprFormer L2Expr L2Expr
     | ExprLatter L2Expr L2Expr
 
@@ -41,7 +41,7 @@ instance Expr L1Expr where
 
 instance Expr L2Expr where
     match expr o b = case expr of
-        L2Expr exprL1 -> match exprL1 o b
+        L1Expr exprL1 -> match exprL1 o b
         ExprFormer expr1 expr2 -> do
             Match st1 ed1 c1 <- match expr1 o b
             Match _ _ c2 <- match expr2 c1 b
@@ -82,6 +82,26 @@ linesAll expr b = linesAll' 0
 
 linesTill :: Expr expr => expr -> ByteString -> Maybe Match
 linesTill expr b = listToMaybe (linesAll expr b)
+
+parseCabal :: ByteString -> Either ByteString Cabal
+parseCabal b = case linesTill versionExpr b of
+    Nothing -> Left "can't find the version field in the cabal file"
+    Just (Match st ed _) -> let suffix = B.drop ed b in Right Cabal
+        { cabalPrefix = B.take st b
+        , cabalVersion = B.range st ed b
+        , cabalSuffix = suffix
+        , cabalExecs = (\ (Match st1 ed1 _) -> B.range st1 ed1 suffix) <$>
+            linesAll executableExpr suffix
+        }
+  where
+    versionExpr =
+        L1Expr (ExprExact "version:" `ExprChain` ExprWhile (' ' ==))
+        `ExprLatter`
+        L1Expr ExprAny
+    executableExpr =
+        L1Expr (ExprExact "executable " `ExprChain` ExprWhile (' ' ==))
+        `ExprLatter`
+        L1Expr ExprAny
 
 -- parseCabal :: ByteString -> [ByteString]
 -- parseCabal = parseLines $ \ b -> if "executable " `B.isPrefixOf` b
