@@ -3,6 +3,7 @@ module Main where
 import Prelude hiding ((++))
 import Control.Monad
 import Control.Exception
+import System.IO
 import System.IO.Error
 
 import System.Posix.ByteString
@@ -50,13 +51,11 @@ main = do
             ] >>= B.putStrLn
         runFail "upx" ["-9", bin] >>= B.putStrLn
 
-    case length versions of
-        0 -> die ["version not found in change log"]
-        1 -> return ()
-        _ -> do
-            let
-                Cabal{..} = cabal
-                (newver : oldver : _) = versions
+    case versions of
+        [] -> die ["version not found in change log"]
+        [_] -> return ()
+        (newver : oldver : _) -> do
+            let Cabal{..} = cabal
             when (cabalVersion /= newver) $ do
                 B.writeFile cabalPath $ mconcat
                     [cabalPrefix, head versions, cabalSuffix]
@@ -67,6 +66,12 @@ main = do
                     B.writeFile "README.md" $ mconcat
                         [readMePrefix, newver, readMeSuffix]
                     void $ runFail "git" ["add", "README.md"]
+
+    bracket (mkstemp "/tmp/")
+        (\ (path, h) -> hClose h *> removeLink path)
+        $ \ (path, h) -> do
+            B.hPutStr h $ mconcat ["Version: ", head versions]
+            void $ runFail "git" ["commit", "-v", "-t", path]
 
     -- git commit (with -t)
     -- send them to github
