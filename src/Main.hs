@@ -49,7 +49,7 @@ main = do
             , "--remove-section=.comment", "--remove-section=.note"
             , bin
             ] >>= B.putStrLn
-        runFail "upx" ["-9", bin] >>= B.putStrLn
+        run "upx" ["-9", bin]
 
     case versions of
         [] -> die ["version not found in change log"]
@@ -67,11 +67,12 @@ main = do
                         [readMePrefix, newver, readMeSuffix]
                     void $ runFail "git" ["add", "README.md"]
 
-    bracket (mkstemp "/tmp/")
-        (\ (path, h) -> hClose h *> removeLink path)
+    bracket (mkstemp "/tmp/wild-")
+        (\ (path, _) -> removeLink path)
         $ \ (path, h) -> do
             B.hPutStr h $ mconcat ["Version: ", head versions]
-            void $ runFail "git" ["commit", "-v", "-t", path]
+            hClose h
+            void $ run "git" ["commit", "-v", "-t", path]
 
     -- git commit (with -t)
     -- send them to github
@@ -82,7 +83,7 @@ main = do
 
 runFail :: RawFilePath -> [ByteString] -> IO ByteString
 runFail cmd args = do
-    x <- run cmd args
+    x <- runRead cmd args
     case x of
         Left c -> do
             B.putStrLn $ mconcat

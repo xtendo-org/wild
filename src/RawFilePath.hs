@@ -4,6 +4,7 @@
 --
 module RawFilePath
     ( run
+    , runRead
     , getDirectoryContents
     , getDirectoryContentsSuffix
     ) where
@@ -15,8 +16,19 @@ import qualified Data.ByteString.Char8 as B
 import System.Exit
 import System.Posix.ByteString
 
-run :: RawFilePath -> [ByteString] -> IO (Either Int ByteString)
+run :: RawFilePath -> [ByteString] -> IO ()
 run cmd args = do
+    pid <- forkProcess $ executeFile cmd True args Nothing
+    getProcessStatus True False pid >>= \ mstatus -> case mstatus of
+        Just status -> case status of
+            Exited exitCode -> case exitCode of
+                ExitSuccess -> return ()
+                ExitFailure c -> error $ show cmd ++ " (" ++ show c ++ ")"
+            _ -> error $ show cmd
+        Nothing -> error $ show cmd
+
+runRead :: RawFilePath -> [ByteString] -> IO (Either Int ByteString)
+runRead cmd args = do
     (fd0, fd1) <- createPipe
     pid <- forkProcess $ do
         closeFd fd0
