@@ -2,6 +2,7 @@ module Main where
 
 import Prelude hiding ((++))
 import Control.Monad
+import Control.Exception
 import System.IO.Error
 
 import System.Posix.ByteString
@@ -37,9 +38,8 @@ main = do
         Right c -> return c
     let binPaths = map (homePath ++ "/.local/bin/" ++) $ cabalExecs cabal
     versions <- parseChangeLog <$> catchIOError
-        (B.readFile "/CHANGELOG.md")
+        (B.readFile "CHANGELOG.md")
         (const $ error "Failed reading CHANGELOG.md")
-    -- if length versions <= 1
 
     void $ runFail "stack" ["install"]
     forM_ binPaths $ \ bin -> do
@@ -50,8 +50,24 @@ main = do
             ] >>= B.putStrLn
         runFail "upx" ["-9", bin] >>= B.putStrLn
 
-    -- update files
-    -- git add them
+    case length versions of
+        0 -> die ["version not found in change log"]
+        1 -> return ()
+        _ -> do
+            let
+                Cabal{..} = cabal
+                (newver : oldver : _) = versions
+            when (cabalVersion /= newver) $ do
+                B.writeFile cabalPath $ mconcat
+                    [cabalPrefix, head versions, cabalSuffix]
+                void $ runFail "git" ["add", cabalPath]
+            readCatch "README.md" >>= \ b -> case parseReadMe oldver b of
+                Left e -> die ["README.md: ", e]
+                Right ReadMe{..} -> do
+                    B.writeFile "README.md" $ mconcat
+                        [readMePrefix, newver, readMeSuffix]
+                    void $ runFail "git" ["add", "README.md"]
+
     -- git commit (with -t)
     -- send them to github
   where
