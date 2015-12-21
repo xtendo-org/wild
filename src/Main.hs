@@ -42,13 +42,13 @@ main = do
         (B.readFile "CHANGELOG.md")
         (const $ error "Failed reading CHANGELOG.md")
 
-    void $ runFail "stack" ["install"]
+    run "stack" ["install"]
     forM_ binPaths $ \ bin -> do
-        runFail "strip"
+        run "strip"
             [ "--strip-all"
             , "--remove-section=.comment", "--remove-section=.note"
             , bin
-            ] >>= B.putStrLn
+            ]
         run "upx" ["-9", bin]
 
     case versions of
@@ -59,13 +59,15 @@ main = do
             when (cabalVersion /= newver) $ do
                 B.writeFile cabalPath $ mconcat
                     [cabalPrefix, head versions, cabalSuffix]
-                void $ runFail "git" ["add", cabalPath]
+                run "git" ["add", cabalPath]
             readCatch "README.md" >>= \ b -> case parseReadMe oldver b of
                 Left e -> die ["README.md: ", e]
                 Right ReadMe{..} -> do
                     B.writeFile "README.md" $ mconcat
                         [readMePrefix, newver, readMeSuffix]
-                    void $ runFail "git" ["add", "README.md"]
+                    run "git" ["add", "README.md"]
+
+    run "git" ["add", "CHANGELOG.md"]
 
     bracket (mkstemp "/tmp/wild-")
         (\ (path, _) -> removeLink path)
