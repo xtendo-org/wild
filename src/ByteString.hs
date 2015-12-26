@@ -3,6 +3,7 @@ module ByteString
     , writeFile
     , range
     , module Data.ByteString.Char8
+    , RawFilePath
     ) where
 
 import Prelude hiding (readFile, writeFile)
