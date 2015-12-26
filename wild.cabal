@@ -26,9 +26,12 @@ executable wild
         RawFilePath,
         Pack
     build-depends:
+        aeson == 0.9.*,
         bytestring == 0.10.*,
         lens == 4.*,
+        text == 1.*,
         unix == 2.*,
+        unordered-containers == 0.2.*,
         wreq == 0.4.*,
         base >=4.8 && <4.9
     ghc-options: -Wall -fwarn-incomplete-uni-patterns -O2
