@@ -1,6 +1,7 @@
 module GitHub where
 
 import Prelude hiding ((++))
+import Data.Traversable
 
 import Control.Lens
 import Network.Wreq hiding (postWith)
@@ -89,12 +90,15 @@ uploadRelease
     -> ByteString
     -> ByteString
     -> ByteString
-    -> RawFilePath
-    -> IO (Either CreateFailure (Response LB.ByteString))
-uploadRelease token owner repo tagName path = withSession $ \ s -> do
+    -> [RawFilePath]
+    -> IO (Either CreateFailure ())
+uploadRelease token owner repo tagName paths = withSession $ \ s -> do
     r1 <- createRelease s token owner repo tagName
     case r1 >>= lookupField "upload_url" of
         Left err -> return $ Left err
-        Right t -> do
-            r2 <- uploadAsset s token path t
-            return $ Right r2
+        Right url -> fmap sequence_ <$> for paths $ \ path -> do
+            r2 <- uploadAsset s token path url
+            return $ case r2 ^. responseStatus . statusCode of
+                201 -> Right ()
+                401 -> Left AuthFail
+                x   -> Left (CreateFailure x)
