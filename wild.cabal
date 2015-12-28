@@ -21,12 +21,16 @@ executable wild
     hs-source-dirs:     src
     main-is:            Main.hs
     other-modules:
-        Parser,
+        Format,
         ByteString,
+        GitHub,
+        Irregex,
+        Parser,
         RawFilePath,
         Pack
     build-depends:
         aeson == 0.9.*,
+        aeson-pretty == 0.7.*,
         bytestring == 0.10.*,
         lens == 4.*,
         text == 1.*,
