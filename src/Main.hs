@@ -17,6 +17,8 @@ import qualified ByteString as B
 import qualified Pack
 import RawFilePath
 import Parser
+import Format
+import GitHub
 
 (++) :: Monoid m => m -> m -> m
 (++) = mappend
@@ -38,9 +40,8 @@ main = do
         Left e -> die [e]
         Right c -> return c
     let binPaths = map (homePath ++ "/.local/bin/" ++) $ cabalExecs cabal
-    versions <- parseChangeLog <$> catchIOError
-        (B.readFile "CHANGELOG.md")
-        (const $ error "Failed reading CHANGELOG.md")
+    versions <- parseChangeLog <$> readCatch "CHANGELOG.md"
+    Conf{..} <- either error id . dec <$> readCatch "wild.json"
 
     run "stack" ["install"]
     forM_ binPaths $ \ bin -> do
@@ -76,8 +77,6 @@ main = do
             hClose h
             void $ run "git" ["commit", "-v", "-t", path]
 
-    -- git commit (with -t)
-    -- send them to github
   where
     readCatch :: RawFilePath -> IO ByteString
     readCatch path = catchIOError (B.readFile path) $

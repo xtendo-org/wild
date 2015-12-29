@@ -1,4 +1,6 @@
-module GitHub where
+module GitHub
+    ( uploadRelease
+    ) where
 
 import Prelude hiding ((++))
 import Data.Traversable
