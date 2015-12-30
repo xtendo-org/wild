@@ -29,15 +29,17 @@ class EncodeJSON a where
 data Conf = Conf
     { owner :: !Text
     , repo :: !Text
+    , tokenPath :: !Text
     }
     deriving (Show, Generic)
 
 instance FromJSON Conf
 instance ToJSON Conf
 instance EncodeJSON Conf where
-    enc = encBase ["owner", "repo"]
+    enc = encBase ["owner", "repo", "tokenPath"]
 
 initConf :: Conf
 initConf = Conf
     "owner"
     "repo"
+    "/path/to/tokenfile"

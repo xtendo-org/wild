@@ -1,5 +1,6 @@
 module GitHub
-    ( uploadRelease
+    ( CreateFailure(..)
+    , uploadRelease
     ) where
 
 import Prelude hiding ((++))

@@ -5,12 +5,10 @@ import Control.Monad
 import Control.Exception
 import System.IO
 import System.IO.Error
+import qualified Data.Text.Encoding as T
 
 import System.Posix.ByteString
 import System.Exit hiding (die)
-
--- import Control.Lens
--- import Network.Wreq
 
 import ByteString (ByteString)
 import qualified ByteString as B
@@ -23,13 +21,14 @@ import GitHub
 (++) :: Monoid m => m -> m -> m
 (++) = mappend
 
-updateTargets :: [RawFilePath]
-updateTargets =
-    [ "README.md"
-    ]
-
 main :: IO ()
 main = do
+    Conf{..} <- fmap (either error id . dec) $
+        catchIOError (B.readFile "wild.json") $ const $ do
+            B.writeFile "wild.json" $ enc initConf
+            B.putStrLn "Created wild.json with default configuration."
+            exitFailure
+
     homePath <- getEnv "HOME" >>= \ m -> case m of
         Nothing -> die ["No $HOME?!"]
         Just p -> return p
@@ -41,7 +40,9 @@ main = do
         Right c -> return c
     let binPaths = map (homePath ++ "/.local/bin/" ++) $ cabalExecs cabal
     versions <- parseChangeLog <$> readCatch "CHANGELOG.md"
-    Conf{..} <- either error id . dec <$> readCatch "wild.json"
+    token <- readCatch $ let
+        path = T.encodeUtf8 tokenPath
+        in if B.head path == '~' then homePath ++ B.tail path else path
 
     run "stack" ["install"]
     forM_ binPaths $ \ bin -> do
@@ -76,6 +77,13 @@ main = do
             B.hPutStr h $ mconcat ["Version: ", head versions]
             hClose h
             void $ run "git" ["commit", "-v", "-t", path]
+
+    uploadResult <- uploadRelease
+        token (T.encodeUtf8 owner) (T.encodeUtf8 repo) (head versions)
+        binPaths
+    case uploadResult of
+        Left x -> error (show x)
+        Right _ -> return ()
 
   where
     readCatch :: RawFilePath -> IO ByteString
