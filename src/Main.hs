@@ -19,13 +19,13 @@ import RawFilePath
 import Parser
 import Format
 import GitHub
+import Unsafe
 
 (++) :: Monoid m => m -> m -> m
 (++) = mappend
 
 data Cmd
     = CmdHelp
-    | CmdAll
     | CmdPrep
     | CmdVersion
     | CmdUpload
@@ -33,8 +33,8 @@ data Cmd
 arguments :: Mode Cmd
 arguments = modes "wild" CmdHelp
     "automate releasing Haskell projects"
-    [ m "all" CmdAll "run all wild steps"
-    , m "prep" CmdPrep "build project to prepare for release"
+    [ m "prep" CmdPrep "build project and strip executables\
+        \ to prepare for release"
     , m "version" CmdVersion "change the version string\
         \ in files and commit those changes"
     , m "upload" CmdUpload "create a new release draft in GitHub\
@@ -47,29 +47,18 @@ arguments = modes "wild" CmdHelp
 
 main :: IO ()
 main = do
-    Conf{..} <- fmap (either error id . dec) $
-        catchIOError (B.readFile "wild.json") $ const $ do
-            B.writeFile "wild.json" $ enc initConf
-            B.putStrLn "Created wild.json with default configuration."
-            exitFailure
+    arg <- processArgs arguments
+    case arg of
+        CmdHelp     -> print $ helpText [] HelpFormatDefault arguments
+        CmdPrep     -> runPrep
+        CmdVersion  -> runVersion
+        CmdUpload   -> runUpload
 
-    homePath <- getEnv "HOME" >>= \ m -> case m of
-        Nothing -> die ["No $HOME?!"]
-        Just p -> return p
-    cabalPath <- getDirectoryContentsSuffix "." ".cabal" >>= \ s -> case s of
-        [] -> error "no cabal file found in the current directory"
-        (x : _) -> return x
-    cabal <- parseCabal <$> readCatch cabalPath  >>= \ m -> case m of
-        Left e -> die [e]
-        Right c -> return c
-    let binPaths = map (homePath ++ "/.local/bin/" ++) $ cabalExecs cabal
-    versions <- parseChangeLog <$> readCatch "CHANGELOG.md"
-    token <- readCatch $ let
-        path = T.encodeUtf8 tokenPath
-        in if B.head path == '~' then homePath ++ B.tail path else path
-
+runPrep :: IO ()
+runPrep = do
+    Cabal{..} <- getCabal
     run "stack" ["install"]
-    forM_ binPaths $ \ bin -> do
+    forM_ cabalExecs $ \ bin -> do
         run "strip"
             [ "--strip-all"
             , "--remove-section=.comment", "--remove-section=.note"
@@ -77,11 +66,15 @@ main = do
             ]
         run "upx" ["-9", bin]
 
+runVersion :: IO ()
+runVersion = do
+    versions <- parseChangeLog <$> readCatch "CHANGELOG.md"
     case versions of
         [] -> die ["version not found in change log"]
         [_] -> return ()
         (newver : oldver : _) -> do
-            let Cabal{..} = cabal
+            cabalPath <- getCabalPath
+            Cabal{..} <- getCabal
             when (cabalVersion /= newver) $ do
                 B.writeFile cabalPath $ mconcat
                     [cabalPrefix, head versions, cabalSuffix]
@@ -103,19 +96,47 @@ main = do
             void $ run "git"
                 ["commit", "-v", "--allow-empty-message", "-t", path]
 
-    run "git" ["push", "origin", "master"]
+runUpload :: IO ()
+runUpload = do
+    versions <- parseChangeLog <$> readCatch "CHANGELOG.md"
+    homePath <- getHomePath
+    Cabal{..} <- getCabal
+    Conf{..} <- fmap (either error id . dec) $
+        catchIOError (B.readFile "wild.json") $ const $ do
+            B.writeFile "wild.json" $ enc initConf
+            B.putStrLn "Created wild.json with default configuration."
+            exitFailure
+
+    token <- readCatch $ let
+        path = T.encodeUtf8 tokenPath
+        in if B.head path == '~' then homePath ++ B.tail path else path
 
     uploadResult <- uploadRelease
         token (T.encodeUtf8 owner) (T.encodeUtf8 repo) (head versions)
-        binPaths
+        cabalExecs
     case uploadResult of
         Left x -> error (show x)
         Right _ -> return ()
 
-  where
-    readCatch :: RawFilePath -> IO ByteString
-    readCatch path = catchIOError (B.readFile path) $
-        const $ B.putStrLn ("Failed reading " ++ path) *> exitFailure
+getHomePath :: IO RawFilePath
+getHomePath = getRef homePathRef $ getEnv "HOME" >>= \ m -> case m of
+    Nothing -> die ["No $HOME?!"]
+    Just p -> return p
+
+getCabalPath :: IO RawFilePath
+getCabalPath = getRef cabalPathRef $
+    getDirectoryContentsSuffix "." ".cabal" >>= \ s -> case s of
+        [] -> error "no cabal file found in the current directory"
+        (x : _) -> return x
+
+getCabal :: IO Cabal
+getCabal = getRef cabalRef $ do
+    homePath <- getHomePath
+    cabalPath <- getCabalPath
+    let binPath = map (homePath ++ "/.local/bin/" ++)
+    parseCabal <$> readCatch cabalPath  >>= \ m -> case m of
+        Left e -> die [e]
+        Right c -> return c { cabalExecs = binPath (cabalExecs c) }
 
 runFail :: RawFilePath -> [ByteString] -> IO ByteString
 runFail cmd args = do
@@ -129,3 +150,7 @@ runFail cmd args = do
 
 die :: [ByteString] -> IO a
 die e = B.putStrLn (mconcat e) *> exitFailure
+
+readCatch :: RawFilePath -> IO ByteString
+readCatch path = catchIOError (B.readFile path) $
+    const $ B.putStrLn ("Failed reading " ++ path) *> exitFailure
