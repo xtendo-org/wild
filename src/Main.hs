@@ -76,7 +76,10 @@ main = do
         $ \ (path, h) -> do
             B.hPutStr h $ mconcat ["Version: ", head versions]
             hClose h
-            void $ run "git" ["commit", "-v", "-t", path]
+            void $ run "git"
+                ["commit", "-v", "--allow-empty-message", "-t", path]
+
+    run "git" ["push", "origin", "master"]
 
     uploadResult <- uploadRelease
         token (T.encodeUtf8 owner) (T.encodeUtf8 repo) (head versions)
