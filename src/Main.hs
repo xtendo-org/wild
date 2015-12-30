@@ -10,6 +10,8 @@ import qualified Data.Text.Encoding as T
 import System.Posix.ByteString
 import System.Exit hiding (die)
 
+import System.Console.CmdArgs.Explicit
+
 import ByteString (ByteString)
 import qualified ByteString as B
 import qualified Pack
@@ -20,6 +22,28 @@ import GitHub
 
 (++) :: Monoid m => m -> m -> m
 (++) = mappend
+
+data Cmd
+    = CmdHelp
+    | CmdAll
+    | CmdPrep
+    | CmdVersion
+    | CmdUpload
+
+arguments :: Mode Cmd
+arguments = modes "wild" CmdHelp
+    "automate releasing Haskell projects"
+    [ m "all" CmdAll "run all wild steps"
+    , m "prep" CmdPrep "build project to prepare for release"
+    , m "version" CmdVersion "change the version string\
+        \ in files and commit those changes"
+    , m "upload" CmdUpload "create a new release draft in GitHub\
+        \ and upload executables as its assets"
+    ]
+  where
+    m :: Name -> Cmd -> Help -> Mode Cmd
+    m name cmd help = mode name cmd help
+        (flagArg (\_ c -> Right c) "") []
 
 main :: IO ()
 main = do
