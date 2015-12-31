@@ -30,7 +30,7 @@ executable wild
         Pack,
         Unsafe
     build-depends:
-        aeson == 0.9.*,
+        aeson == 0.10.*,
         aeson-pretty == 0.7.*,
         bytestring == 0.10.*,
         cmdargs == 0.10.*,
