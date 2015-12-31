@@ -32,6 +32,14 @@ data CreateFailure
     | CreateFailure Int
     deriving (Show)
 
+opts :: ByteString -> Options
+opts token = defaults
+    & header "Accept" .~ ["application/vnd.github.v3+json"]
+    & header "Authorization" .~ ["token " ++ token]
+    & header "User-Agent" .~ ["wild"]
+    & header "Content-Type" .~ ["application/json; charset=utf-8"]
+    & checkStatus .~ Nothing
+
 createRelease
     :: Session
     -> ByteString
@@ -44,15 +52,13 @@ createRelease session token owner repo tagName =
         401 -> Left AuthFail
         _ -> Right r
   where
-    resp = postWith opts session uri content
-    opts = defaults
-        & header "Authorization" .~ ["token " ++ token]
-        & checkStatus .~ Nothing
+    resp = B.putStrLn content *> postWith (opts token) session uri content
     uri = B.unpack $ mconcat
         ["https://api.github.com/repos/", owner, "/", repo, "/releases"]
     content = mconcat
-        [ "{\"tag_name\": \"", tagName, "\",\"name\":\"", tagName
-        , "\",\"draft\":true}"
+        [ "{\"tag_name\":\"", tagName, "\",\"name\":\"", tagName
+        , "\",\"draft\":true,\"prerelease\":false,\
+            \\"target_commitish\":\"master\"}"
         ]
 
 lookupField
@@ -79,11 +85,8 @@ uploadAsset
     -> Text
     -> IO (Response LB.ByteString)
 uploadAsset session token path url = B.readFile path >>=
-    postWith opts session uploadURL
+    postWith (opts token) session uploadURL
   where
-    opts = defaults
-        & header "Authorization" .~ ["token " ++ token]
-        & checkStatus .~ Nothing
     name = snd $ B.breakEnd (== '/') path
     uploadURL = B.unpack $ mconcat
         [T.encodeUtf8 $ T.takeWhile (/= '{') url, "?name=", name]

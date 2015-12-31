@@ -107,12 +107,12 @@ runUpload = do
             B.putStrLn "Created wild.json with default configuration."
             exitFailure
 
-    token <- readCatch $ let
+    token <- fmap (fst . B.breakEnd (/= '\n')) $ readCatch $ let
         path = T.encodeUtf8 tokenPath
         in if B.head path == '~' then homePath ++ B.tail path else path
 
     uploadResult <- uploadRelease
-        token (T.encodeUtf8 owner) (T.encodeUtf8 repo) (head versions)
+        token (T.encodeUtf8 owner) (T.encodeUtf8 repo) ("v" ++ head versions)
         cabalExecs
     case uploadResult of
         Left x -> error (show x)
