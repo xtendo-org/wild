@@ -26,18 +26,18 @@ import Unsafe
 
 data Cmd
     = CmdHelp
-    | CmdPrep
-    | CmdVersion
-    | CmdUpload
+    | CmdBuild
+    | CmdBump
+    | CmdGithub
 
 arguments :: Mode Cmd
 arguments = modes "wild" CmdHelp
-    "automate releasing Haskell projects"
-    [ m "prep" CmdPrep "build project and strip executables\
+    "Release Haskell projects"
+    [ m "build" CmdBuild "build project and strip executables\
         \ to prepare for release"
-    , m "version" CmdVersion "change the version string\
+    , m "bump" CmdBump "read the change log, change the version string\
         \ in files and commit those changes"
-    , m "upload" CmdUpload "create a new release draft in GitHub\
+    , m "github" CmdGithub "create a new release draft in GitHub\
         \ and upload executables as its assets"
     ]
   where
@@ -50,12 +50,12 @@ main = do
     arg <- processArgs arguments
     case arg of
         CmdHelp     -> print $ helpText [] HelpFormatDefault arguments
-        CmdPrep     -> runPrep
-        CmdVersion  -> runVersion
-        CmdUpload   -> runUpload
+        CmdBuild    -> runBuild
+        CmdBump     -> runBump
+        CmdGithub   -> runGithub
 
-runPrep :: IO ()
-runPrep = do
+runBuild :: IO ()
+runBuild = do
     Cabal{..} <- getCabal
     run "stack" ["install"]
     forM_ cabalExecs $ \ bin -> do
@@ -66,8 +66,8 @@ runPrep = do
             ]
         run "upx" ["-9", bin]
 
-runVersion :: IO ()
-runVersion = do
+runBump :: IO ()
+runBump = do
     versions <- parseChangeLog <$> readCatch "CHANGELOG.md"
     case versions of
         [] -> die ["version not found in change log"]
@@ -96,8 +96,8 @@ runVersion = do
             void $ run "git"
                 ["commit", "-v", "--allow-empty-message", "-t", path]
 
-runUpload :: IO ()
-runUpload = do
+runGithub :: IO ()
+runGithub = do
     versions <- parseChangeLog <$> readCatch "CHANGELOG.md"
     homePath <- getHomePath
     Cabal{..} <- getCabal
