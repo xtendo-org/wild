@@ -44,8 +44,12 @@ parseCabal b = case linesTill versionExpr b of
 
 parseChangeLog :: ByteString -> [ByteString]
 parseChangeLog = parseLines $ \ b -> if "##" `B.isPrefixOf` b
-    then Just $ B.takeWhile (/= ' ') $ B.dropWhile (== ' ') $ B.drop 2 b
+    then Just $ f $ B.takeWhile (/= ' ') $ B.dropWhile (== ' ') $ B.drop 2 b
     else Nothing
+  where
+    f b
+        | B.head b == '[' = B.takeWhile (/= ']') $ B.tail b
+        | otherwise = b
 
 data ReadMe = ReadMe
     { readMePrefix :: ByteString
