@@ -4,7 +4,6 @@ module Pack
     ) where
 
 import Data.ByteString (ByteString)
-import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.ByteString.Builder as B
 
