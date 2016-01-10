@@ -13,7 +13,7 @@ build-type:         Simple
 cabal-version:      >=1.18
 homepage:           https://github.com/kinoru/wild
 bug-reports:        https://github.com/kinoru/wild/issues
-tested-with:        GHC==7.10.2
+tested-with:        GHC==7.10.3
 extra-source-files: README.md CHANGELOG.md
 
 executable wild
