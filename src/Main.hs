@@ -20,6 +20,7 @@ import Parser
 import Format
 import GitHub
 import Unsafe
+import Platform
 
 (++) :: Monoid m => m -> m -> m
 (++) = mappend
@@ -59,11 +60,7 @@ runBuild = do
     Cabal{..} <- getCabal
     run "stack" ["install"]
     forM_ cabalExecs $ \ bin -> do
-        run "strip"
-            [ "--strip-all"
-            , "--remove-section=.comment", "--remove-section=.note"
-            , bin
-            ]
+        stripCommand bin
         run "upx" ["-9", "--lzma", bin]
 
 runBump :: IO ()

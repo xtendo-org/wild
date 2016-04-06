@@ -14,13 +14,22 @@ cabal-version:      >=1.18
 homepage:           https://github.com/kinoru/wild
 bug-reports:        https://github.com/kinoru/wild/issues
 tested-with:        GHC==7.10.3
-extra-source-files: README.md CHANGELOG.md
+extra-source-files:
+    README.md
+    CHANGELOG.md
+    src/gnulinux/Platform.hs
+    src/osx/Platform.hs
 
 executable wild
     default-extensions: OverloadedStrings, RecordWildCards
     hs-source-dirs:     src
+    if os(linux)
+        hs-source-dirs: src/gnulinux
+    if os(darwin)
+        hs-source-dirs: src/osx
     main-is:            Main.hs
     other-modules:
+        Platform,
         Format,
         ByteString,
         GitHub,
