@@ -64,7 +64,7 @@ runBuild = do
             , "--remove-section=.comment", "--remove-section=.note"
             , bin
             ]
-        run "upx" ["-9", bin]
+        run "upx" ["-9", "--lzma", bin]
 
 runBump :: IO ()
 runBump = do
