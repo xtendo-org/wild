@@ -11,6 +11,8 @@ This command simply runs the following commands:
 - `strip --strip-all --remove-section=.comment --remove-section=.note` for the executables that has been put under `~/.local/bin` by `stack install`
 - `upx -9` for those executables
 
+In other words, `strip` and `upx` need to be in your `$PATH`.
+
 ## `wild bump`: Version bump
 
 This command reads `CHANGELOG.md`, updates the version string in `<project>.cabal` and `README.md`, then lets you commit those changes.
