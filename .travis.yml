@@ -45,3 +45,4 @@ script:
 - |
   # stack --no-terminal $ARGS test --haddock --no-haddock-deps
   stack --no-terminal install
+  wild build
