@@ -32,9 +32,20 @@ before_install:
 - |
   if [ `uname` = "Darwin" ]
   then
-    curl --insecure -L https://www.stackage.org/stack/osx-x86_64 | tar xz --strip-components=1 --include '*/stack' -C ~/.local/bin && sudo launchctl limit maxfiles 20480 20480
+    curl --insecure -L https://www.stackage.org/stack/osx-x86_64 | tar xz --strip-components=1 --include '*/stack' -C ~/.local/bin &
+    PID=$!
+    brew update && brew install upx
+    wait $PID
+    sudo launchctl limit maxfiles 20480 20480
   else
-    curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack'
+    curl -L https://www.stackage.org/stack/linux-x86_64 | tar xz --wildcards --strip-components=1 -C ~/.local/bin '*/stack' &
+    PID=$!
+    if ! type upx ; then
+        curl -L http://upx.sourceforge.net/ | grep "<a href=.*amd64_linux" | sed -e "s|.*<a href=\"\(.*\)\">.*|\1|" | xargs printf "http://upx.sourceforge.net/%s\n" | xargs curl -L | tee /tmp/upx.tar.bz2 > /dev/null
+        tar xjf /tmp/upx.tar.bz2
+        mv `ls -d upx-*`/upx ~/.local/bin/
+    fi
+    wait $PID
   fi
 
 install:
