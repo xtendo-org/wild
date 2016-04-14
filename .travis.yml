@@ -60,3 +60,16 @@ script:
   # stack --no-terminal $ARGS test --haddock --no-haddock-deps
   stack --no-terminal install
   wild build
+  if [ `uname` = "Darwin" ]
+  then
+    cp ~/.local/bin/wild /tmp/wild_osx
+  fi
+
+deploy:
+  provider: releases
+  api_key:
+    secure: DL+eW+5M+bCclNTOgG8Lt++LfCn9MrDoQ1OieFNV+Xu5ZjBjPpqOt5/oXrLUdNY3AsVcJKGLTSz0ZXUjhQTISCDx2Lg+ZbC2bQclY4kNMFiew4hjm6gMhpgoEOFBd+5+yro1d7ku1kLzJVlovCusI39bI+yYqZv++RuSQM9P5WLbHF+8WQf25ObMWBNasFc500SULauC+v5jxdzcOtU95fB0oiDetlSIkgMIpUHB/g2+Xr2fPVyMPpYgkFM0j/TGWsz3KilkKjTM+4R4YBmNMu94lnzpWgZErvV5P1XH8E9KUS0Te9HAXIhEqnS45wvOIAkky9EPQSWvPyNFIyjnPpokkHH2BVUvwqBf5HNj/m/x5UpD7k5gTHYGeZfg0zegSEB5gIvGFDqwvB0IqO9uTuE1b4KF63J7N1l4Svnh8bQyBeXfUigWGJJ57faOub84Ch7QMr01/Kp11Dc6t+znxw+lvM9Ll/A8UTWuWl02jx9a8vXl11q0iP6oEjeyvdnHgRtdZmZTmppBOYMe1VZSIeoXC5+qElRPcp24Q2RjhwY608Q3Nx/xVuLgSE7iKJjsFXR2IbAZ+U15KaTN3BeolCyDuJXrM3dn8f/CDU1OdUsNH0uu6HkHxFVAFSA4Z75575bwht/qg0V3OcyncjqOpvyiGDkcLfPot+24kqIJgl8=
+  file: "/tmp/wild_osx"
+  on:
+    repo: kinoru/wild
+    branch: unstable
