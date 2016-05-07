@@ -108,6 +108,7 @@ runGithub = do
         path = T.encodeUtf8 tokenPath
         in if B.head path == '~' then homePath ++ B.tail path else path
 
+    B.putStr "Uploading to GitHub releases.."
     uploadResult <- uploadRelease
         token (T.encodeUtf8 owner) (T.encodeUtf8 repo) ("v" ++ head versions)
         cabalExecs

@@ -55,7 +55,7 @@ createRelease session token owner repo tagName =
         401 -> Left AuthFail
         _ -> Right r
   where
-    resp = B.putStrLn content *> postWith (opts token) session uri content
+    resp = postWith (opts token) session uri content
     uri = B.unpack $ mconcat
         ["https://api.github.com/repos/", owner, "/", repo, "/releases"]
     content = mconcat
