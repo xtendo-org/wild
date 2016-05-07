@@ -10,3 +10,6 @@ stripCommand bin = run "strip"
     , "--remove-section=.comment", "--remove-section=.note"
     , bin
     ]
+
+releaseSuffix :: ByteString
+releaseSuffix = "gnulinux"

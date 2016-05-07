@@ -5,6 +5,7 @@ module GitHub
 
 import Prelude hiding ((++))
 import Data.Traversable
+import Data.Monoid
 
 import Control.Lens
 import Network.Wreq hiding (postWith)
@@ -19,6 +20,8 @@ import qualified Data.HashMap.Strict as H
 
 import ByteString (ByteString, RawFilePath)
 import qualified ByteString as B
+
+import Platform (releaseSuffix)
 
 (++) :: Monoid m => m -> m -> m
 (++) = mappend
@@ -87,7 +90,7 @@ uploadAsset
 uploadAsset session token path url = B.readFile path >>=
     postWith (opts token) session uploadURL
   where
-    name = snd $ B.breakEnd (== '/') path
+    name = (snd $ B.breakEnd (== '/') path) <> "_" <> releaseSuffix
     uploadURL = B.unpack $ mconcat
         [T.encodeUtf8 $ T.takeWhile (/= '{') url, "?name=", name]
 

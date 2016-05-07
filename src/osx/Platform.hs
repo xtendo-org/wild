@@ -6,3 +6,6 @@ import RawFilePath
 
 stripCommand :: ByteString -> IO ()
 stripCommand bin = run "strip" ["-u", "-r", bin]
+
+releaseSuffix :: ByteString
+releaseSuffix = "osx"
