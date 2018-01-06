@@ -41,7 +41,7 @@ opts token = defaults
     & header "Authorization" .~ ["token " ++ token]
     & header "User-Agent" .~ ["wild"]
     & header "Content-Type" .~ ["application/json; charset=utf-8"]
-    & checkStatus .~ Nothing
+    & checkResponse .~ Nothing
 
 createRelease
     :: Session
